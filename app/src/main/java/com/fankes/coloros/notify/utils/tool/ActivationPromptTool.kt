@@ -34,6 +34,7 @@ import android.os.Build
 import androidx.core.graphics.drawable.toBitmap
 import com.fankes.coloros.notify.R
 import com.fankes.coloros.notify.utils.factory.appIconOf
+import com.fankes.coloros.notify.utils.factory.appNameOf
 import com.fankes.coloros.notify.wrapper.BuildConfigWrapper
 
 /**
@@ -63,6 +64,7 @@ object ActivationPromptTool {
             )
             notify(packageName.hashCode(), Notification.Builder(context, NOTIFY_CHANNEL).apply {
                 setShowWhen(true)
+                setSubText(context.appNameOf(MODULE_PACKAGE_NAME))
                 setContentTitle("模块已更新")
                 setContentText("点按通知打开模块以完成新版本激活。")
                 setColor(0xFF4E8A5A.toInt())
