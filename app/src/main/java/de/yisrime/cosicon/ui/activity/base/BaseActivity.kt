@@ -24,6 +24,7 @@
  */
 package de.yisrime.cosicon.ui.activity.base
 
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -36,6 +37,7 @@ import de.yisrime.cosicon.utils.factory.isNotSystemInDarkMode
 import com.highcapable.kavaref.KavaRef.Companion.resolve
 import com.highcapable.kavaref.extension.genericSuperclassTypeArguments
 import com.highcapable.kavaref.extension.toClassOrNull
+import de.yisrime.cosicon.data.ConfigStore
 
 abstract class BaseActivity<VB : ViewBinding> : AppCompatActivity() {
 
@@ -64,8 +66,27 @@ abstract class BaseActivity<VB : ViewBinding> : AppCompatActivity() {
             window?.navigationBarColor = it
             window?.navigationBarDividerColor = it
         }
+        /** 框架服务异步送达，挂载完成后重建以读到真实配置 */
+        if (ConfigStore.isPreferencesAvailable.not()) {
+            ConfigStore.afterAttached {
+                runOnUiThread {
+                    if (isFinishing.not()) {
+                        /** 不能用 recreate：它会恢复 View 状态，把首帧的缺省值重新盖回来 */
+                        restartWithoutState()
+                    }
+                }
+            }
+        }
         /** 装载子类 */
         onCreate()
+    }
+
+    /** 以不带实例状态的方式重启当前页面 */
+    private fun restartWithoutState() {
+        val intent = Intent(this, javaClass)
+        finish()
+        startActivity(intent)
+        overridePendingTransition(0, 0)
     }
 
     /** 回调 [onCreate] 方法 */

@@ -51,19 +51,20 @@ class MainHook : XposedModule() {
         HostEnv.classLoader = param.classLoader
         HostEnv.packageName = param.packageName
         if (param.packageName != PackageName.SYSTEMUI) return
-        HostEnv.applicationContext = HostEnv.resolveApplication()
         if (isNotColorOS) {
             Log.w(TAG, "Aborted Hook -> This System is not ColorOS")
             return
         }
-        /** 命令通道不受模块开关影响，宿主版本查询必须始终可答 */
-        HostBridge.hostMountReceivers()
-        if (ConfigData.isEnableModule.not()) {
-            Log.w(TAG, "Aborted Hook -> Hook Closed")
-            return
+        HostEnv.awaitApplication {
+            /** 命令通道不受模块开关影响，宿主版本查询必须始终可答 */
+            HostBridge.hostMountReceivers()
+            if (ConfigData.isEnableModule.not()) {
+                Log.w(TAG, "Aborted Hook -> Hook Closed")
+                return@awaitApplication
+            }
+            runCatching { SystemUIHooker.prepare() }
+                .onFailure { Log.e(TAG, "Hook 挂载失败: SystemUIHooker", it) }
         }
-        runCatching { SystemUIHooker.prepare() }
-            .onFailure { Log.e(TAG, "Hook 挂载失败: SystemUIHooker", it) }
     }
 
     override fun onSystemServerStarting(param: SystemServerStartingParam) {

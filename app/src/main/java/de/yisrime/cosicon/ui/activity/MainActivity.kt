@@ -48,7 +48,6 @@ import de.yisrime.cosicon.utils.factory.showTimePicker
 import de.yisrime.cosicon.utils.tool.I18nWarnTool
 import de.yisrime.cosicon.utils.tool.IconRuleManagerTool
 import de.yisrime.cosicon.utils.tool.SystemUITool
-import com.fankes.projectpromote.ProjectPromote
 import com.highcapable.betterandroid.ui.extension.view.isUnderline
 import de.yisrime.cosicon.wrapper.FrameworkWrapper
 
@@ -101,19 +100,13 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                         cancelButton()
                         noCancelable()
                     }
-                /** 推广、恰饭 */
-                ProjectPromote.show(activity = this, ModuleVersion.toString())
             }
-            else ->
-                showDialog {
-                    title = "模块没有激活"
-                    msg = "检测到模块没有激活，模块需要 Xposed 环境依赖，" +
-                        "同时需要系统拥有 Root 权限，" +
-                        "请自行查看本页面使用帮助与说明第二条。\n" +
-                        "由于需要修改系统应用达到效果，模块不支持太极阴、应用转生。"
-                    confirmButton(text = "我知道了")
-                    noCancelable()
-                }
+            else -> /** 框架服务由 Provider 异步送达，冷启动时可能尚未绑定，稍后复核一次 */
+                binding.root.postDelayed({
+                    if (isActivityLive.not()) return@postDelayed
+                    refreshModuleStatus()
+                    if (FrameworkWrapper.isBound.not()) showNotActivatedDialog()
+                }, 1500)
         }
         I18nWarnTool.checkingOrShowing(context = this)
         binding.mainTextVersion.text = "模块版本：${ModuleVersion.NAME}"
@@ -346,6 +339,19 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         SystemUITool.registerExportDebugLogsLauncher(activity = this)
     }
 
+    /** 模块未激活提示 */
+    private fun showNotActivatedDialog() {
+        showDialog {
+            title = "模块没有激活"
+            msg = "检测到模块没有激活，模块需要 Xposed 环境依赖，" +
+                "同时需要系统拥有 Root 权限，" +
+                "请自行查看本页面使用帮助与说明第二条。\n" +
+                "由于需要修改系统应用达到效果，模块不支持太极阴、应用转生。"
+            confirmButton(text = "我知道了")
+            noCancelable()
+        }
+    }
+
     /** 刷新模块状态 */
     private fun refreshModuleStatus() {
         binding.mainLinStatus.setBackgroundResource(
@@ -369,8 +375,9 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             FrameworkWrapper.isBound -> "模块已激活"
             else -> "模块未激活"
         }
-        binding.mainTextApiWay.isVisible = FrameworkWrapper.isBound && FrameworkWrapper.frameworkName.isNotEmpty()
-        binding.mainTextApiWay.text = "Activated by ${FrameworkWrapper.frameworkName} API ${FrameworkWrapper.frameworkApiVersion}"
+        val frameworkName = FrameworkWrapper.frameworkName
+        binding.mainTextApiWay.isVisible = frameworkName.isNotEmpty()
+        binding.mainTextApiWay.text = "Activated by $frameworkName API ${FrameworkWrapper.frameworkApiVersion}"
     }
 
     override fun onResume() {
@@ -383,5 +390,10 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             isModuleValied = isValied
             refreshModuleStatus()
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        isActivityLive = false
     }
 }

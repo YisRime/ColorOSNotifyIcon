@@ -20,12 +20,24 @@ package de.yisrime.cosicon.hook
 import android.content.BroadcastReceiver
 import android.util.Log
 import de.yisrime.cosicon.BuildConfig
+import de.yisrime.cosicon.utils.tool.ModuleLog
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.os.Handler
+import android.os.Looper
 import com.highcapable.kavaref.extension.VariousClass
 import com.highcapable.kavaref.resolver.ConstructorResolver
 import com.highcapable.kavaref.resolver.MethodResolver
+
+/** 统一日志标识 */
+private const val LOG_TAG = "ColorOSNotifyIcon"
+
+/** 等待宿主 Application 发布的轮询间隔 */
+private const val APPLICATION_RETRY_INTERVAL = 200L
+
+/** 等待宿主 Application 发布的最大轮询次数 */
+private const val APPLICATION_RETRY_LIMIT = 50
 
 /**
  * 宿主类加载器，由 MainHook 在包加载时写入
@@ -52,6 +64,41 @@ object HostEnv {
             .getMethod("currentApplication")
             .invoke(null) as? Context
     }.getOrNull()
+
+    /**
+     * 取得宿主 Application 后执行
+     *
+     * 包就绪回调可能早于 ActivityThread 发布 Application，此时直接取会拿到 null，
+     * 依赖上下文的挂载会整体静默失效；取不到时改投主循环后续轮次重试。
+     * @param block 处理逻辑 - 参数为宿主 Application
+     */
+    fun awaitApplication(block: (Context) -> Unit) {
+        resolveApplication()?.let {
+            applicationContext = it
+            block(it)
+            return
+        }
+        val handler = Handler(Looper.getMainLooper())
+        var attempt = 0
+        val probe = object : Runnable {
+            override fun run() {
+                val application = resolveApplication()
+                when {
+                    application != null -> {
+                        applicationContext = application
+                        block(application)
+                    }
+
+                    ++attempt < APPLICATION_RETRY_LIMIT ->
+                        handler.postDelayed(this, APPLICATION_RETRY_INTERVAL)
+
+                    else -> ModuleLog.error("Aborted Hook -> Application Context Unavailable")
+                }
+            }
+        }
+        handler.postDelayed(probe, APPLICATION_RETRY_INTERVAL)
+    }
+
 }
 
 /**
@@ -73,21 +120,30 @@ class ReceiverScope internal constructor(private val sink: MutableList<Broadcast
      * @param handler 处理逻辑 - 接收者上下文与意图
      */
     fun registerReceiver(filter: IntentFilter, handler: (Context, Intent) -> Unit) {
-        val context = HostEnv.applicationContext ?: return
+        val context = HostEnv.applicationContext ?: run {
+            ModuleLog.warn("Aborted Receiver -> Application Context Unavailable: $filter")
+            return
+        }
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(receiverContext: Context, intent: Intent) = handler(receiverContext, intent)
         }
-        runCatching { context.registerReceiver(receiver, filter) }.onSuccess { sink.add(receiver) }
+        runCatching { context.registerReceiver(receiver, filter) }
+            .onSuccess { sink.add(receiver) }
+            .onFailure { ModuleLog.error("Aborted Receiver -> Register Failed: $filter", it) }
     }
 
     /**
      * 宿主 Application 就绪时执行
      *
-     * 挂载发生在包就绪之后，此时 Application 已存在，故立即以该上下文执行。
+     * 依赖 awaitApplication 已保证上下文存在；缺失时不再静默跳过而是留痕。
      * @param block 处理逻辑 - 接收者为主机上下文
      */
     fun onCreate(block: Context.() -> Unit) {
-        HostEnv.applicationContext?.block()
+        val context = HostEnv.applicationContext ?: run {
+            ModuleLog.warn("Aborted onCreate -> Application Context Unavailable")
+            return
+        }
+        context.block()
     }
 }
 

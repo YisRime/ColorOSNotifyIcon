@@ -18,6 +18,7 @@
 package de.yisrime.cosicon.data
 
 import android.content.SharedPreferences
+import de.yisrime.cosicon.utils.tool.ModuleLog
 
 /**
  * 配置键描述
@@ -43,8 +44,24 @@ object ConfigStore {
     @Volatile
     private var writable = false
 
+    private val pendingActions = mutableListOf<() -> Unit>()
+
     /** 配置是否可读写访问 */
     val isPreferencesAvailable: Boolean get() = prefs != null
+
+    /**
+     * 存储挂载后执行
+     *
+     * 框架服务经 Provider 异步送达，冷启动时页面可能先于挂载渲染，
+     * 那时读到的全是缺省值；已挂载则立即执行。
+     * @param action 处理逻辑
+     */
+    fun afterAttached(action: () -> Unit) {
+        val queued = synchronized(pendingActions) {
+            isPreferencesAvailable.not() && pendingActions.add(action)
+        }
+        if (queued.not()) action()
+    }
 
     /**
      * 挂载配置存储
@@ -54,6 +71,12 @@ object ConfigStore {
     fun attach(source: SharedPreferences, writable: Boolean) {
         prefs = source
         this.writable = writable
+        val pending = synchronized(pendingActions) {
+            val copy = pendingActions.toList()
+            pendingActions.clear()
+            copy
+        }
+        pending.forEach { it() }
     }
 
     /** 卸载配置存储 */
@@ -83,13 +106,19 @@ object ConfigStore {
     }
 
     /**
-     * 写入配置，只读挂载下静默忽略
+     * 写入配置，丢弃一律留痕
      * @param key 键描述
      * @param value 写入值
      */
     fun <T> put(key: PrefKey<T>, value: T) {
-        val source = prefs ?: return
-        if (!writable) return
+        val source = prefs ?: run {
+            ModuleLog.warn("配置未保存：存储未挂载 ${key.key}")
+            return
+        }
+        if (!writable) {
+            ModuleLog.warn("配置未保存：只读挂载 ${key.key}")
+            return
+        }
         val editor = source.edit()
         when (value) {
             is String -> editor.putString(key.key, value)
@@ -98,8 +127,12 @@ object ConfigStore {
             is Boolean -> editor.putBoolean(key.key, value)
             is Float -> editor.putFloat(key.key, value)
             is Set<*> -> @Suppress("UNCHECKED_CAST") editor.putStringSet(key.key, value as Set<String>)
-            else -> return
+            else -> {
+                ModuleLog.warn("配置未保存：不支持的值类型 ${key.key} ${value?.javaClass?.simpleName ?: "null"}")
+                return
+            }
         }
-        editor.apply()
+        /** 必须同步提交：apply 走库自己的线程池，进程被杀时提交还没发出 */
+        if (!editor.commit() || source.all[key.key] != value) ModuleLog.warn("配置写入未被接受：${key.key}")
     }
 }

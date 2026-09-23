@@ -29,6 +29,7 @@ package de.yisrime.cosicon.ui.activity
 import androidx.core.view.isVisible
 import de.yisrime.cosicon.R
 import de.yisrime.cosicon.data.ConfigData
+import de.yisrime.cosicon.data.ConfigStore
 import de.yisrime.cosicon.databinding.ActivityConfigBinding
 import de.yisrime.cosicon.databinding.AdapterConfigBinding
 import de.yisrime.cosicon.databinding.DiaIconFilterBinding
@@ -69,7 +70,7 @@ class ConfigureActivity : BaseActivity<ActivityConfigBinding>() {
 
     override fun onCreate() {
         /** 检查激活和启用状态 */
-        if (FrameworkWrapper.isBound.not() || ConfigData.isEnableModule.not()) {
+        if (ConfigStore.isPreferencesAvailable && (FrameworkWrapper.isBound.not() || ConfigData.isEnableModule.not())) {
             showDialog {
                 title = "模块不可用"
                 msg = "模块没有激活或已被停用，你无法使用这里的功能，请先激活或启用模块。"
@@ -206,7 +207,8 @@ class ConfigureActivity : BaseActivity<ActivityConfigBinding>() {
                 if (IconRuleManagerTool.isCachedVersionBehind(this@ConfigureActivity, requestedSource to requestedVersion))
                     onStartRefresh(isByHand = false)
             }
-            intent?.getBooleanExtra("isShowUpdDialog", true) == true -> onStartRefresh()
+            /** 已有数据时直接进列表，同步入口仍可由页面下方的同步按钮使用 */
+            intent?.getBooleanExtra("isShowUpdDialog", true) == true && iconAllDatas.isEmpty() -> onStartRefresh()
         }
         /** 清除数据 */
         intent?.apply {

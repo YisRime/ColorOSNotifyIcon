@@ -30,6 +30,7 @@ import de.yisrime.cosicon.hook.HostEnv
 import de.yisrime.cosicon.utils.factory.execShell
 import de.yisrime.cosicon.wrapper.BuildConfigWrapper
 import java.io.File
+import java.security.SecureRandom
 
 /**
  * 模块进程与宿主进程之间的命令通道
@@ -83,6 +84,9 @@ object HostBridge {
     /** 宿主日志目录相对外部存储的固定位置 */
     private const val HOST_LOG_DIRECTORY = "/storage/emulated/0/Android/data/"
 
+    /** 回执序号生成器 */
+    private val random = SecureRandom()
+
     /** 允许拼接进 shell 的日志文件名字符集 */
     private val LOG_NAME_PATTERN = Regex("[A-Za-z0-9._-]+\\.log")
 
@@ -110,7 +114,10 @@ object HostBridge {
      * 在宿主进程内挂载命令接收器
      */
     fun hostMountReceivers() {
-        val context = HostEnv.applicationContext ?: return
+        val context = HostEnv.applicationContext ?: run {
+            ModuleLog.warn("Aborted Command Channel -> Application Context Unavailable")
+            return
+        }
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(receiverContext: Context, intent: Intent) {
                 val kind = intent.getIntExtra(EXTRA_KIND, 0)
@@ -140,7 +147,9 @@ object HostBridge {
             ContextCompat.registerReceiver(
                 context, receiver, IntentFilter(ACTION_HOST_COMMAND), ContextCompat.RECEIVER_EXPORTED
             )
-        }.onFailure { Log.e(TAG, "宿主命令接收器注册失败", it) }
+        }.onSuccess {
+            ModuleLog.info("Command Channel Mounted")
+        }.onFailure { ModuleLog.error("宿主命令接收器注册失败", it) }
     }
 
     private fun writeHostLogs(context: Context): String? = runCatching {
@@ -186,7 +195,9 @@ object HostBridge {
         timeoutMs: Long = 5000L,
         onReply: (Intent) -> Unit
     ) {
-        val requestId = System.nanoTime()
+        /** 回执凭序号匹配，序号必须不可预测，否则任意应用可伪造回执 */
+        var requestId: Long
+        do { requestId = random.nextLong() } while (requestId == 0L)
         var delivered = false
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(receiverContext: Context, intent: Intent) {

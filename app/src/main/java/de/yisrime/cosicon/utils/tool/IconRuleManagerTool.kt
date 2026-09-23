@@ -97,8 +97,9 @@ object IconRuleManagerTool {
     private const val NOTIFY_CHANNEL = "notifyRuleUpdateId"
     private const val NOTIFY_COLOR = 0xFF4E8A5A.toInt()
 
-    private const val GITHUB_PROXY_1_URL = "https://cdn.gh-proxy.org"
-    private const val GITHUB_PROXY_2_URL = "https://ghfast.top"
+    /** 两条线路均实测可完整转发 release 资产（1399499 字节，sha256 与清单一致） */
+    private const val GITHUB_PROXY_1_URL = "https://gh-proxy.org"
+    private const val GITHUB_PROXY_2_URL = "https://gh-proxy.com"
 
     private val githubProxy1UrlResolver = RemoteSource.UrlResolver { sourceUrl, _, _ -> "$GITHUB_PROXY_1_URL/$sourceUrl" }
     private val githubProxy2UrlResolver = RemoteSource.UrlResolver { sourceUrl, _, _ -> "$GITHUB_PROXY_2_URL/$sourceUrl" }
@@ -126,10 +127,34 @@ object IconRuleManagerTool {
      */
     suspend fun fetch(context: Context): Anip.FetchResult {
         val currentAnip = obtainAnip(context)
-        val result = currentAnip.fetch()
-        if (result.isOk && publishSnapshot(currentAnip).not())
-            return Anip.FetchResult("ANIP 资源中没有可用的通知图标", Anip.FetchResult.Status.FAILED)
-        return result
+        val result = fetchWithDirectFallback(currentAnip)
+        if (result.isOk) {
+            if (publishSnapshot(currentAnip).not())
+                return Anip.FetchResult("ANIP 资源中没有可用的通知图标", Anip.FetchResult.Status.FAILED)
+            return result
+        }
+        /** SDK 只给笼统文案，附上真正请求的地址才看得出是哪个来源断了 */
+        return Anip.FetchResult("${result.message}\n${currentAnip.config.source.manifestUrl}", result.status)
+    }
+
+    /**
+     * 代理源取不动资源时回退一次直连
+     *
+     * 公共 GitHub 代理多能转发清单这类小文件，却在 release 资产的跨域重定向上失败，
+     * 表现为清单可读、名单始终拉不下来。
+     * @param anip 当前快照实例
+     * @return SDK 获取结果
+     */
+    private suspend fun fetchWithDirectFallback(anip: Anip): Anip.FetchResult {
+        val source = anip.config.source
+        val result = anip.fetch()
+        if (result.isOk || source.urlResolver == null) return result
+        val direct = runCatching { createSource(ConfigData.iconRuleRepository, IconRuleSourceSyncType.GITHUB_DIRECT) }.getOrNull()
+            ?: return result
+        anip.config.source = direct
+        val retried = anip.fetch()
+        return if (retried.isOk) retried
+        else Anip.FetchResult("${retried.message}\n${source.manifestUrl}", retried.status)
     }
 
     /**
