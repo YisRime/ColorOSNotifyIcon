@@ -74,13 +74,6 @@ object SystemUITool {
         fun onRefreshIconData(refresh: (Pair<String, Long>, (Boolean) -> Unit) -> Unit) {
             HostBridge.hostRegisterIconDataHandler(refresh)
         }
-
-        /**
-         * 挂载模块命令接收器
-         */
-        fun mountCommandReceivers() {
-            HostBridge.hostMountReceivers()
-        }
     }
 
     /**

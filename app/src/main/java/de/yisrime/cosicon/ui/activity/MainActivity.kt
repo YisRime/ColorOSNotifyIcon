@@ -369,7 +369,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             FrameworkWrapper.isBound -> "模块已激活"
             else -> "模块未激活"
         }
-        binding.mainTextApiWay.isVisible = FrameworkWrapper.isBound
+        binding.mainTextApiWay.isVisible = FrameworkWrapper.isBound && FrameworkWrapper.frameworkName.isNotEmpty()
         binding.mainTextApiWay.text = "Activated by ${FrameworkWrapper.frameworkName} API ${FrameworkWrapper.frameworkApiVersion}"
     }
 

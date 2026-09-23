@@ -43,12 +43,6 @@ object ConfigStore {
     @Volatile
     private var writable = false
 
-    /** 当前挂载的存储实例，未挂载时为 null */
-    val source: SharedPreferences? get() = prefs
-
-    /** 是否已挂载 */
-    val isAttached: Boolean get() = prefs != null
-
     /** 配置是否可读写访问 */
     val isPreferencesAvailable: Boolean get() = prefs != null
 
@@ -107,21 +101,5 @@ object ConfigStore {
             else -> return
         }
         editor.apply()
-    }
-
-    /**
-     * 注册配置变更监听
-     * @param listener 监听器
-     */
-    fun registerChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
-        prefs?.registerOnSharedPreferenceChangeListener(listener)
-    }
-
-    /**
-     * 注销配置变更监听
-     * @param listener 监听器
-     */
-    fun unregisterChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
-        prefs?.unregisterOnSharedPreferenceChangeListener(listener)
     }
 }

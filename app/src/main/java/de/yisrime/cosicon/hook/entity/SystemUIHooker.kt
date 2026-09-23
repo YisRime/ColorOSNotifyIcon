@@ -763,8 +763,6 @@ object SystemUIHooker : HookerBase() {
     /** 注册生命周期 */
     private fun registerLifecycle() {
         onAppLifecycle {
-            /** 挂载模块命令通道 */
-            SystemUITool.Host.mountCommandReceivers()
             /** 解锁后重新刷新状态栏图标防止系统重新设置它 */
             registerReceiver(Intent.ACTION_USER_PRESENT) { _, _ -> if (isUsingCachingMethod) refreshStatusBarIcons() }
             /** 注册定时监听 */

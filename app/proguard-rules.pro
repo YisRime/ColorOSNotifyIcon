@@ -27,7 +27,6 @@
 -verbose
 -overloadaggressively
 -allowaccessmodification
--adaptclassstrings
 -adaptresourcefilenames
 -adaptresourcefilecontents
 
@@ -55,3 +54,6 @@
 -keep class kotlinx.coroutines.android.AndroidDispatcherFactory {*;}
 # libxposed 入口类由 META-INF/xposed/java_init.list 按名加载，禁止改名
 -keep class de.yisrime.cosicon.hook.MainHook { <init>(); }
+
+# AIDL 接口名就是 binder 的 interface token，改名会让框架侧 enforceInterface 拒绝
+-keepnames class io.github.libxposed.service.I*

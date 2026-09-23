@@ -33,11 +33,11 @@ object FrameworkWrapper {
     /** 框架服务是否已连接 */
     val isBound: Boolean get() = service != null
 
-    /** 框架名称 */
-    val frameworkName: String get() = service?.frameworkName ?: ""
+    /** 框架名称，服务无响应时为空 */
+    val frameworkName: String get() = runCatching { service?.frameworkName ?: "" }.getOrDefault("")
 
-    /** 框架 API 等级 */
-    val frameworkApiVersion: Int get() = service?.apiVersion ?: 0
+    /** 框架 API 等级，服务无响应时为 0 */
+    val frameworkApiVersion: Int get() = runCatching { service?.apiVersion ?: 0 }.getOrDefault(0)
 
     /**
      * 是否运行在被注入的进程中

@@ -29,6 +29,7 @@ import de.yisrime.cosicon.data.ConfigStore
 import de.yisrime.cosicon.hook.entity.FrameworkHooker
 import de.yisrime.cosicon.hook.entity.SystemUIHooker
 import de.yisrime.cosicon.utils.factory.isNotColorOS
+import de.yisrime.cosicon.utils.tool.HostBridge
 
 /**
  * libxposed 模块入口
@@ -55,6 +56,8 @@ class MainHook : XposedModule() {
             Log.w(TAG, "Aborted Hook -> This System is not ColorOS")
             return
         }
+        /** 命令通道不受模块开关影响，宿主版本查询必须始终可答 */
+        HostBridge.hostMountReceivers()
         if (ConfigData.isEnableModule.not()) {
             Log.w(TAG, "Aborted Hook -> Hook Closed")
             return
