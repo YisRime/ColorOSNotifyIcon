@@ -45,7 +45,6 @@ import de.yisrime.cosicon.utils.factory.openBrowser
 import de.yisrime.cosicon.utils.factory.openNotifySetting
 import de.yisrime.cosicon.utils.factory.showDialog
 import de.yisrime.cosicon.utils.factory.showTimePicker
-import de.yisrime.cosicon.utils.tool.GithubReleaseTool
 import de.yisrime.cosicon.utils.tool.I18nWarnTool
 import de.yisrime.cosicon.utils.tool.IconRuleManagerTool
 import de.yisrime.cosicon.utils.tool.SystemUITool
@@ -70,14 +69,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
     override fun onCreate() {
         /** 设置可用性 */
         isActivityLive = true
-        /** 检查更新 */
-        GithubReleaseTool.checkingForUpdate(context = this, ModuleVersion.NAME) { version, function ->
-            binding.mainTextReleaseVersion.apply {
-                text = "点击更新 $version"
-                isVisible = true
-                setOnClickListener { function() }
-            }
-        }
         when {
             /** 判断是否为 ColorOS 系统 */
             isNotColorOS ->

@@ -168,13 +168,49 @@ val colorOSNumberVersion
     get() = safeOf(default = "无法获取") {
         "com.oplus.os.OplusBuild".toClassOrNull()?.let { clazz ->
             @Suppress("UNCHECKED_CAST")
-            val versions = runCatching { clazz.getField("VERSIONS").get(null) as Array<String> }.getOrNull()
-            val index = runCatching {
-                (clazz.getMethod("getOplusOSVERSION").invoke(null) as? Int) ?: -1
-            }.getOrDefault(-1)
+            val versions = clazz.staticFieldValue("VERSIONS") as? Array<String>
+            val index = clazz.staticMethod("getOplusOSVERSION")?.let {
+                runCatching { (it.invoke(null) as? Int) ?: -1 }.getOrDefault(-1)
+            } ?: -1
             versions?.takeIf { it.isNotEmpty() }?.getOrNull(index - 1)
         } ?: findPropString("ro.system.build.fingerprint", "无法获取").split("ssi:")[1].split("/")[0].trim()
     }
+
+/**
+ * 取本类及其父类的静态字段值并放开访问限制
+ *
+ * 上游 OplusBuild 的成员不保证是 public，getField 只认 public 会取不到。
+ * @param name 字段名
+ * @return 字段值，未找到返回 null
+ */
+private fun Class<*>.staticFieldValue(name: String): Any? {
+    var type: Class<*>? = this
+    while (type != null) {
+        type.declaredFields.firstOrNull { it.name == name }?.let {
+            it.isAccessible = true
+            return it.get(null)
+        }
+        type = type.superclass
+    }
+    return null
+}
+
+/**
+ * 取本类及其父类的无参静态方法并放开访问限制
+ * @param name 方法名
+ * @return 方法对象，未找到返回 null
+ */
+private fun Class<*>.staticMethod(name: String): java.lang.reflect.Method? {
+    var type: Class<*>? = this
+    while (type != null) {
+        type.declaredMethods.firstOrNull { it.name == name && it.parameterCount == 0 }?.let {
+            it.isAccessible = true
+            return it
+        }
+        type = type.superclass
+    }
+    return null
+}
 /**
  * 获取 [Drawable]
  * @param resId 属性资源 ID

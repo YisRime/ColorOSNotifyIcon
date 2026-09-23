@@ -180,12 +180,19 @@ fun List<out ConstructorResolver<*>>.hookAll(): HookGroupHandle =
     HookGroupHandle(map { HookEnv.api.hook(it.self) })
 
 /**
- * 通过宿主类加载器解析类名，缺失时返回 null
+ * 通过类加载器解析类名，缺失时返回 null
+ *
+ * 宿主类加载器只在注入进程内存在；模块进程内它为空，此时必须退回本进程自身的
+ * 类加载器，否则框架启动类（如 com.color.os.ColorBuild）会被判为不存在。
  * @return 解析结果
  */
 @Suppress("UNCHECKED_CAST")
-fun String.toClassOrNull(): Class<Any>? =
-    HostEnv.classLoader?.let { runCatching { Class.forName(this, false, it) as Class<Any>? }.getOrNull() }
+fun String.toClassOrNull(): Class<Any>? {
+    HostEnv.classLoader?.let { loader ->
+        runCatching { Class.forName(this, false, loader) as Class<Any>? }.getOrNull()?.let { return it }
+    }
+    return runCatching { Class.forName(this) as Class<Any>? }.getOrNull()
+}
 
 /**
  * 通过宿主类加载器解析类名
