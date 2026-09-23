@@ -53,3 +53,5 @@
 -keep class kotlinx.coroutines.internal.MainDispatcherLoader {*;}
 -keep class kotlinx.coroutines.internal.FastServiceLoader {*;}
 -keep class kotlinx.coroutines.android.AndroidDispatcherFactory {*;}
+# libxposed 入口类由 META-INF/xposed/java_init.list 按名加载，禁止改名
+-keep class de.yisrime.cosicon.hook.MainHook { <init>(); }

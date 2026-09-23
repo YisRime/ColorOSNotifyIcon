@@ -4,7 +4,7 @@
 [![GitHub CI](https://img.shields.io/github/actions/workflow/status/fankes/ColorOSNotifyIcon/commit_ci.yml?label=CI%20builds&style=flat-square)](https://github.com/fankes/ColorOSNotifyIcon/actions/workflows/commit_ci.yml)
 [![GitHub release](https://img.shields.io/github/v/release/fankes/ColorOSNotifyIcon?display_name=release&logo=github&color=green&style=flat-square)](https://github.com/fankes/ColorOSNotifyIcon/releases)
 ![GitHub all releases](https://img.shields.io/github/downloads/fankes/ColorOSNotifyIcon/total?label=downloads&style=flat-square)
-![GitHub all releases](https://img.shields.io/github/downloads/Xposed-Modules-Repo/com.fankes.coloros.notify/total?label=LSPosed%20downloads&labelColor=F48FB1&style=flat-square)
+![GitHub all releases](https://img.shields.io/github/downloads/Xposed-Modules-Repo/de.yisrime.cosicon/total?label=LSPosed%20downloads&labelColor=F48FB1&style=flat-square)
 
 [![Telegram CI](https://img.shields.io/badge/CI%20builds-Telegram-blue.svg?logo=telegram&style=flat-square)](https://t.me/ColorOSNotifyIcon_CI)
 [![Telegram](https://img.shields.io/badge/discussion-Telegram-blue.svg?logo=telegram&style=flat-square)](https://t.me/XiaofangInternet)
@@ -21,6 +21,15 @@ Optimize notification icons for ColorOS and adapt to native notification icon sp
 
 This project will not be adapted i18n, please stay tuned for my new projects in the future.
 
+## 版本与作者
+
+- 版本：1.0.0（versionCode 100）
+- 包名：`de.yisrime.cosicon`
+- 原项目作者：[fankes](https://github.com/fankes/ColorOSNotifyIcon)
+- 本分支维护与 libxposed 适配：[Yis_Rime](https://github.com/YisRime)
+
+本版将模块入口由 `assets/xposed_init` 迁移至 `META-INF/xposed/java_init.list`，解除对 YukiHookAPI 的依赖（其 1.3.2 无任何 libxposed 通道），Hook 层改用 libxposed `XposedModule` 配合 Kavaref，配置读写改由 libxposed RemotePreferences 承载，模块与宿主之间的刷新指令与日志导出改为显式广播加宿主落盘文件。因不再走 legacy Xposed API，本模块要求宿主框架实现 libxposed 规范，LSPosed 1.x、EdXposed 与 LSPatch 等仅支持旧 API 的框架无法加载。
+
 ## 项目迁移公告
 
 由于本人同时维护 **MIUI** 与 **ColorOS** 两个系统需要同时维护两个模块，十分不方便，所以我决定在后期逐渐合并两个项目并解耦合为一个新项目并计划适配更多系统与设备，例如原生与类原生系统。
@@ -29,7 +38,7 @@ This project will not be adapted i18n, please stay tuned for my new projects in 
 
 ## 适配说明
 
-- 此模块仅支持 **LSPosed** (作用域“系统界面”)、**~~EdXposed(随时停止支持)~~**、不支持**太极、无极**
+- 此模块仅支持实现 **libxposed** 规范的框架（实测为 **LSPosed** 2.x 及以上，作用域勾选“系统界面”与“Android”），不支持 **LSPosed 1.x**、**EdXposed**、**太极**、**无极**
 
 - 目前仅在 ColorOS 12、12.1、13 for OnePlus 上测试通过，如有问题请提交 `issues`
 
@@ -65,7 +74,7 @@ This project will not be adapted i18n, please stay tuned for my new projects in 
 | <img src="https://avatars.githubusercontent.com/in/15368?s=64&v=4" width = "30" height = "30" alt="LOGO"/> | [GitHub Releases](https://github.com/fankes/ColorOSNotifyIcon/releases) | 正式版 (稳定版) |
 |------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------|-----------|
 
-| <img src="https://avatars.githubusercontent.com/u/78217009?s=200&v=4?raw=true" width = "30" height = "30" alt="LOGO"/> | [Xposed-Modules-Repo](https://github.com/Xposed-Modules-Repo/com.fankes.coloros.notify/releases) | 正式版 (稳定版) |
+| <img src="https://avatars.githubusercontent.com/u/78217009?s=200&v=4?raw=true" width = "30" height = "30" alt="LOGO"/> | [Xposed-Modules-Repo](https://github.com/Xposed-Modules-Repo/de.yisrime.cosicon/releases) | 正式版 (稳定版) |
 |------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------|-----------|
 
 本模块发布地址仅限于上述所列出的地址，从其他非正规渠道下载到的版本或对您造成任何影响均与我们无关。
