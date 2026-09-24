@@ -1,17 +1,25 @@
+@file:Suppress("UnstableApiUsage")
+
+import org.jetbrains.kotlin.konan.properties.Properties
+
 plugins {
     alias(libs.plugins.android.application)
 }
+
+val localProperties = Properties()
+if (rootProject.file("local.properties").canRead())
+    localProperties.load(rootProject.file("local.properties").inputStream())
 
 android {
     namespace = gropify.project.app.packageName
     compileSdk = gropify.project.android.compileSdk
 
-    signingConfigs {
-        create("universal") {
-            keyAlias = gropify.project.app.signing.keyAlias
-            keyPassword = gropify.project.app.signing.keyPassword
-            storeFile = rootProject.file(gropify.project.app.signing.storeFilePath)
-            storePassword = gropify.project.app.signing.storePassword
+    val universal = localProperties.getProperty("androidStoreFile")?.let {
+        signingConfigs.create("universal") {
+            storeFile = file(it)
+            storePassword = localProperties.getProperty("androidStorePassword")
+            keyAlias = localProperties.getProperty("androidKeyAlias")
+            keyPassword = localProperties.getProperty("androidKeyPassword")
             enableV1Signing = true
             enableV2Signing = true
         }
@@ -25,7 +33,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
-        all { signingConfig = signingConfigs.getByName("universal") }
+        all { signingConfig = universal ?: signingConfigs["debug"] }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
