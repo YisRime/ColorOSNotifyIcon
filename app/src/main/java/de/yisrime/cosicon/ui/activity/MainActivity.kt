@@ -26,6 +26,7 @@
 
 package de.yisrime.cosicon.ui.activity
 
+import android.os.Bundle
 import androidx.core.view.isVisible
 import de.yisrime.cosicon.R
 import de.yisrime.cosicon.const.ModuleVersion
@@ -62,6 +63,12 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
 
         /** 模块是否有效 */
         internal var isModuleValied = false
+    }
+
+    /** 注册启动器：早于 STARTED，不随首帧延后 */
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        SystemUITool.registerExportDebugLogsLauncher(activity = this)
     }
 
     override fun onCreate() {
@@ -249,8 +256,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             if (btn.isPressed.not()) return@setOnCheckedChangeListener
             hideOrShowLauncherIcon(b)
         }
-        /** 注册导出调试日志启动器 */
-        SystemUITool.registerExportDebugLogsLauncher(activity = this)
     }
 
     /** 模块未激活提示 */
