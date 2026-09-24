@@ -36,12 +36,12 @@ import de.yisrime.cosicon.data.PrefKey
  * @param initiate 方法体
  */
 fun CompoundButton.bind(data: PrefKey<Boolean>, initiate: CompoundButtonDataBinder.(CompoundButton) -> Unit = {}) {
-    val binder = CompoundButtonDataBinder(button = this).also { initiate(it, this) }
+    val binder = CompoundButtonDataBinder(button = this, write = { ConfigData.putBoolean(data, it) })
+        .also { initiate(it, this) }
     isChecked = ConfigData.getBoolean(data).also { binder.initializeCallback?.invoke(it) }
-    binder.applyChangesCallback = { ConfigData.putBoolean(data, it) }
     setOnCheckedChangeListener { button, isChecked ->
         if (button.isPressed) {
-            if (binder.isAutoApplyChanges) binder.applyChangesCallback?.invoke(isChecked)
+            binder.write(isChecked)
             binder.changedCallback?.invoke(isChecked)
         }
     }
@@ -50,20 +50,15 @@ fun CompoundButton.bind(data: PrefKey<Boolean>, initiate: CompoundButtonDataBind
 /**
  * [CompoundButton] 数据绑定管理器实例
  * @param button 当前实例
+ * @param write 写入当前状态的逻辑
  */
-class CompoundButtonDataBinder(private val button: CompoundButton) {
+class CompoundButtonDataBinder internal constructor(private val button: CompoundButton, internal val write: (Boolean) -> Unit) {
 
     /** 状态初始化回调事件 */
     internal var initializeCallback: ((Boolean) -> Unit)? = null
 
     /** 状态改变回调事件 */
     internal var changedCallback: ((Boolean) -> Unit)? = null
-
-    /** 应用更改回调事件 */
-    internal var applyChangesCallback: ((Boolean) -> Unit)? = null
-
-    /** 是否启用自动应用更改 */
-    var isAutoApplyChanges = true
 
     /**
      * 监听状态初始化
@@ -84,21 +79,5 @@ class CompoundButtonDataBinder(private val button: CompoundButton) {
     /** 重新初始化 */
     fun reinitialize() {
         initializeCallback?.invoke(button.isChecked)
-    }
-
-    /** 应用更改并重新初始化 */
-    fun applyChangesAndReinitialize() {
-        applyChanges()
-        reinitialize()
-    }
-
-    /** 应用更改 */
-    fun applyChanges() {
-        applyChangesCallback?.invoke(button.isChecked)
-    }
-
-    /** 取消更改 */
-    fun cancelChanges() {
-        button.isChecked = button.isChecked.not()
     }
 }

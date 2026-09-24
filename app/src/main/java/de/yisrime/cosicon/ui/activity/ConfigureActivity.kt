@@ -150,19 +150,8 @@ class ConfigureActivity : BaseActivity<ActivityConfigBinding>() {
                         binding.adpAppAllSwitch.isChecked = isAppNotifyOverlayOf(icon)
                         binding.adpAppAllSwitch.setOnCheckedChangeListener { btn, b ->
                             if (btn.isPressed.not()) return@setOnCheckedChangeListener
-                            fun saveState() {
-                                putAppNotifyOverlayOf(icon, b)
-                                SystemUITool.refreshSystemUI(context = this@ConfigureActivity)
-                            }
-                            if (b) showDialog {
-                                title = "覆盖"
-                                msg = "此功能仅针对严重不遵守规范的 APP 通知图标才需要开启，例如：APP 推送通知后无法识别出现的黑白块图标。\n\n" +
-                                    "此功能在一般情况下请保持关闭并跟随名单提供的配置，并不要随意改变此配置，" +
-                                    "开启后 APP 的通知图标可能会被规则破坏，你确定还要开启吗？"
-                                confirmButton { saveState() }
-                                cancelButton { btn.isChecked = btn.isChecked.not() }
-                                noCancelable()
-                            } else saveState()
+                            putAppNotifyOverlayOf(icon, b)
+                            SystemUITool.refreshSystemUI(context = this@ConfigureActivity)
                         }
                     }
                 }
@@ -220,17 +209,10 @@ class ConfigureActivity : BaseActivity<ActivityConfigBinding>() {
         }
         /** 设置返回监听事件 */
         addOnBackPressedEvent {
-            if (MainActivity.isActivityLive.not())
-                showDialog {
-                    title = "提示"
-                    msg = "要返回模块主页吗？"
-                    confirmButton {
-                        releaseEventAndBack()
-                        navigate<MainActivity>()
-                    }
-                    cancelButton { releaseEventAndBack() }
-                }
-            else releaseEventAndBack()
+            if (MainActivity.isActivityLive.not()) {
+                releaseEventAndBack()
+                navigate<MainActivity>()
+            } else releaseEventAndBack()
         }
     }
 

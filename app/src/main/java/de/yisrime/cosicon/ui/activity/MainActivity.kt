@@ -48,7 +48,6 @@ import de.yisrime.cosicon.utils.factory.showTimePicker
 import de.yisrime.cosicon.utils.tool.I18nWarnTool
 import de.yisrime.cosicon.utils.tool.IconRuleManagerTool
 import de.yisrime.cosicon.utils.tool.SystemUITool
-import com.highcapable.betterandroid.ui.extension.view.isUnderline
 import de.yisrime.cosicon.wrapper.FrameworkWrapper
 
 class MainActivity : BaseActivity<ActivityMainBinding>() {
@@ -101,12 +100,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                         noCancelable()
                     }
             }
-            else -> /** 框架服务由 Provider 异步送达，冷启动时可能尚未绑定，稍后复核一次 */
-                binding.root.postDelayed({
-                    if (isActivityLive.not()) return@postDelayed
-                    refreshModuleStatus()
-                    if (FrameworkWrapper.isBound.not()) showNotActivatedDialog()
-                }, 1500)
+            else -> showNotActivatedDialog()
         }
         I18nWarnTool.checkingOrShowing(context = this)
         binding.mainTextVersion.text = "模块版本：${ModuleVersion.NAME}"
@@ -168,23 +162,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             onChanged { SystemUITool.refreshSystemUI(context = this@MainActivity, isRefreshCacheOnly = true) }
         }
         binding.colorIconCompatSwitch.bind(ConfigData.ENABLE_COLOR_ICON_COMPAT) {
-            isAutoApplyChanges = false
-            onChanged {
-                /** 应用更改并刷新系统界面 */
-                fun applyChangesAndRefresh() {
-                    applyChanges()
-                    SystemUITool.refreshSystemUI(context = this@MainActivity)
-                }
-                if (it) showDialog {
-                    title = "启用兼容模式"
-                    msg = "启用兼容模式可修复部分系统版本可能出现无法判定通知图标反色的问题，" +
-                        "但是这也可能会导致新的问题，一般情况下不建议开启，确定要继续吗？\n\n" +
-                        "如果系统界面刷新后通知图标颜色发生错误，请尝试重启一次系统界面。"
-                    confirmButton { applyChangesAndRefresh() }
-                    cancelButton { cancelChanges() }
-                    noCancelable()
-                } else applyChangesAndRefresh()
-            }
+            onChanged { SystemUITool.refreshSystemUI(context = this@MainActivity) }
         }
         binding.md3StyleConfigSwitch.bind(ConfigData.ENABLE_MD3_NOTIFY_ICON_STYLE) {
             onInitialize { binding.notifyIconCustomCornerItem.isVisible = it && ConfigData.isEnableNotifyIconForceAppIcon.not() }
@@ -194,44 +172,16 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             }
         }
         binding.notifyIconForceSystemColorSwitch.bind(ConfigData.ENABLE_NOTIFY_ICON_FORCE_SYSTEM_COLOR) {
-            isAutoApplyChanges = false
-            onChanged {
-                /** 应用更改并刷新系统界面 */
-                fun applyChangesAndRefresh() {
-                    applyChangesAndReinitialize()
-                    SystemUITool.refreshSystemUI(context = this@MainActivity)
-                }
-                if (it) showDialog {
-                    title = "破坏性功能警告"
-                    msg = "开启这个功能后，任何通知栏中的通知图标都会忽略图标自身的着色属性，全部使用系统默认颜色 (系统提供的统一色调) 着色。\n\n" +
-                        "此功能仅面向一些追求图标美观度的用户，我们不推荐开启这个功能，且发生任何 BUG 都不会去修复，仍然继续开启吗？"
-                    confirmButton { applyChangesAndRefresh() }
-                    cancelButton { cancelChanges() }
-                    noCancelable()
-                } else applyChangesAndRefresh()
-            }
+            onChanged { SystemUITool.refreshSystemUI(context = this@MainActivity) }
         }
         binding.notifyIconForceAppIconSwitch.bind(ConfigData.ENABLE_NOTIFY_ICON_FORCE_APP_ICON) {
-            isAutoApplyChanges = false
             onInitialize {
                 binding.notifyIconForceSystemColorItem.isVisible = it.not()
                 binding.notifyIconCustomCornerItem.isVisible = it.not() && ConfigData.isEnableMd3NotifyIconStyle
             }
             onChanged {
-                /** 应用更改并刷新系统界面 */
-                fun applyChangesAndRefresh() {
-                    applyChangesAndReinitialize()
-                    SystemUITool.refreshSystemUI(context = this@MainActivity)
-                }
-                if (it) showDialog {
-                    title = "破坏性功能警告"
-                    msg = "开启这个功能后，任何通知栏中的通知图标都会被强制替换为当前推送通知的 APP 的图标，" +
-                        "某些系统级别的 APP 通知图标可能会显示异常或发生图标丢失。\n\n" +
-                        "此功能仅面向一些追求图标美观度的用户，我们不推荐开启这个功能，且发生任何 BUG 都不会去修复，仍然继续开启吗？"
-                    confirmButton { applyChangesAndRefresh() }
-                    cancelButton { cancelChanges() }
-                    noCancelable()
-                } else applyChangesAndRefresh()
+                reinitialize()
+                SystemUITool.refreshSystemUI(context = this@MainActivity)
             }
         }
         binding.notifyPanelConfigSwitch.bind(ConfigData.ENABLE_NOTIFY_PANEL_ALPHA) {
@@ -261,24 +211,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             }
         }
         binding.notifyIconFixPlaceholderSwitch.bind(ConfigData.ENABLE_NOTIFY_ICON_FIX_PLACEHOLDER) {
-            isAutoApplyChanges = false
-            onChanged {
-                /** 应用更改并刷新系统界面 */
-                fun applyChangesAndRefresh() {
-                    applyChanges()
-                    SystemUITool.refreshSystemUI(context = this@MainActivity)
-                }
-                if (it) showDialog {
-                    title = "注意"
-                    msg = "开启这个功能后，当发现未适配的彩色通知图标时，" +
-                        "状态栏中显示的通知图标将会使用预置的占位符图标进行修补，" +
-                        "通知栏中显示的通知图标保持原始图标不变。\n\n" +
-                        "此功能的作用仅为临时修复破坏规范的通知图标，仍然继续开启吗？"
-                    confirmButton { applyChangesAndRefresh() }
-                    cancelButton { cancelChanges() }
-                    noCancelable()
-                } else applyChangesAndRefresh()
-            }
+            onChanged { SystemUITool.refreshSystemUI(context = this@MainActivity) }
         }
         binding.notifyIconFixNotifySwitch.bind(ConfigData.ENABLE_NOTIFY_ICON_FIX_NOTIFY) {
             onChanged { SystemUITool.refreshSystemUI(context = this@MainActivity, isRefreshCacheOnly = true) }
@@ -303,32 +236,13 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         /** 自动更新在线规则修改时间按钮点击事件 */
         binding.notifyIconAutoSyncButton.setOnClickListener {
             showTimePicker(ConfigData.notifyIconFixAutoTime) {
-                showDialog {
-                    title = "每天 $it 自动更新"
-                    msg = "设置保存后将在每天 $it 自动同步名单到最新云端数据，若数据已是最新则不会显示任何提示，否则会发送一条通知，模块无需保持在后台运行。"
-                    confirmButton(text = "保存设置") {
-                        ConfigData.notifyIconFixAutoTime = it
-                        this@MainActivity.binding.notifyIconAutoSyncText.text = it
-                        SystemUITool.refreshSystemUI(context, isRefreshCacheOnly = true)
-                    }
-                    cancelButton()
-                    noCancelable()
-                }
+                ConfigData.notifyIconFixAutoTime = it
+                binding.notifyIconAutoSyncText.text = it
+                SystemUITool.refreshSystemUI(this, isRefreshCacheOnly = true)
             }
         }
         /** 重启按钮点击事件 */
         binding.titleRestartIcon.setOnClickListener { SystemUITool.restartSystemUI(context = this) }
-        /** 项目地址按钮点击事件 */
-        binding.titleGithubIcon.setOnClickListener { openBrowser(url = "https://github.com/fankes/ColorOSNotifyIcon") }
-        /** 恰饭！ */
-        binding.layoutSupportMe.setOnClickListener {
-            openBrowser(url = "https://afdian.com/a/fankes")
-        }
-        binding.linkWithSupportMe.isUnderline = true
-        binding.linkWithFollowMe.isUnderline = true
-        binding.linkWithFollowMe.setOnClickListener {
-            openBrowser(url = "https://www.coolapk.com/u/876977", packageName = "com.coolapk.market")
-        }
         /** 设置桌面图标显示隐藏 */
         binding.hideIconInLauncherSwitch.isChecked = isLauncherIconShowing.not()
         binding.hideIconInLauncherSwitch.setOnCheckedChangeListener { btn, b ->

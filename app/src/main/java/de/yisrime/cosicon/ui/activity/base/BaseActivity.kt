@@ -24,13 +24,15 @@
  */
 package de.yisrime.cosicon.ui.activity.base
 
-import android.content.Intent
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.Bundle
 import android.view.LayoutInflater
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.WindowCompat
+import androidx.core.view.isVisible
 import androidx.viewbinding.ViewBinding
 import de.yisrime.cosicon.R
 import de.yisrime.cosicon.utils.factory.isNotSystemInDarkMode
@@ -43,6 +45,9 @@ abstract class BaseActivity<VB : ViewBinding> : AppCompatActivity() {
 
     /** 获取绑定布局对象 */
     lateinit var binding: VB
+
+    /** 内容是否已经渲染 */
+    private var contentRendered = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,27 +71,25 @@ abstract class BaseActivity<VB : ViewBinding> : AppCompatActivity() {
             window?.navigationBarColor = it
             window?.navigationBarDividerColor = it
         }
-        /** 框架服务异步送达，挂载完成后重建以读到真实配置 */
-        if (ConfigStore.isPreferencesAvailable.not()) {
-            ConfigStore.afterAttached {
-                runOnUiThread {
-                    if (isFinishing.not()) {
-                        /** 不能用 recreate：它会恢复 View 状态，把首帧的缺省值重新盖回来 */
-                        restartWithoutState()
-                    }
-                }
-            }
+        /**
+         * 框架服务经 Provider 异步送达，未挂载时先压住内容，等挂载完成再渲染，
+         * 避免首帧显示缺省值后再刷新一次；超时说明服务不会再来，照常渲染
+         */
+        if (ConfigStore.isPreferencesAvailable) {
+            renderContent()
+        } else {
+            binding.root.isVisible = false
+            ConfigStore.afterAttached { runOnUiThread { renderContent() } }
+            Handler(Looper.getMainLooper()).postDelayed({ if (isDestroyed.not()) renderContent() }, 2500)
         }
-        /** 装载子类 */
-        onCreate()
     }
 
-    /** 以不带实例状态的方式重启当前页面 */
-    private fun restartWithoutState() {
-        val intent = Intent(this, javaClass)
-        finish()
-        startActivity(intent)
-        overridePendingTransition(0, 0)
+    /** 渲染页面内容，只生效一次 */
+    private fun renderContent() {
+        if (contentRendered) return
+        contentRendered = true
+        binding.root.isVisible = true
+        onCreate()
     }
 
     /** 回调 [onCreate] 方法 */

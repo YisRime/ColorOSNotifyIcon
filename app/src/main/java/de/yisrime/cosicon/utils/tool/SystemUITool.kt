@@ -30,8 +30,6 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import de.yisrime.cosicon.const.PackageName
-import de.yisrime.cosicon.data.ConfigData
-import de.yisrime.cosicon.ui.activity.MainActivity
 import de.yisrime.cosicon.utils.factory.colorOSFullVersion
 import de.yisrime.cosicon.utils.factory.delayedRun
 import de.yisrime.cosicon.utils.factory.execShell
@@ -126,16 +124,7 @@ object SystemUITool {
             else runCatching { launcher?.launch("coloros_notification_icons_processing_logs.log") }
                 .onFailure { context.snake(msg = "启动系统文件选择器失败") }
         }
-        if (FrameworkWrapper.isBound)
-            context.showDialog {
-                title = "导出全部调试日志"
-                msg = "调试日志中会包含当前系统推送的全部通知内容，其中可能包含你的个人隐私，" +
-                    "你可以在导出后的日志文件中选择将这些敏感信息模糊化处理再进行共享，" +
-                    "开发者使用并查看你导出的调试日志仅为排查与修复问题，并且在之后会及时销毁这些日志。\n\n" +
-                    "继续导出即代表你已阅读并知悉上述内容。"
-                confirmButton(text = "继续") { doExport() }
-                cancelButton()
-            }
+        if (FrameworkWrapper.isBound) doExport()
         else context.snake(msg = "模块没有激活，请先激活模块")
     }
 
@@ -144,9 +133,6 @@ object SystemUITool {
      * @param context 实例
      */
     fun restartSystemUI(context: Context) {
-        /** 动态刷新功能是否可用 */
-        val isDynamicAvailable = ConfigData.isEnableModule && MainActivity.isModuleRegular && MainActivity.isModuleValied
-
         /** 当 Root 权限获取失败时显示对话框 */
         fun showWhenAccessRootFail() =
             context.showDialog {
@@ -156,20 +142,10 @@ object SystemUITool {
                     "请确认当前是否正处于白名单模式。 (白名单模式将导致无法申请 Root 权限)"
                 confirmButton(text = "我知道了")
             }
-        context.showDialog {
-            title = "重启系统界面"
-            msg = "你确定要立即重启系统界面吗？\n\n" +
-                "重启过程会黑屏并等待进入锁屏重新解锁。" + (if (isDynamicAvailable)
-                    "\n\n你也可以选择“立即生效”来动态刷新系统界面并生效当前模块设置。" else "")
-            confirmButton {
-                execShell(cmd = "pgrep systemui").also { pid ->
-                    if (pid.isNotBlank())
-                        execShell(cmd = "kill -9 $pid")
-                    else showWhenAccessRootFail()
-                }
-            }
-            cancelButton()
-            if (isDynamicAvailable) neutralButton(text = "立即生效") { refreshSystemUI(context) }
+        execShell(cmd = "pgrep systemui").also { pid ->
+            if (pid.isNotBlank())
+                execShell(cmd = "kill -9 $pid")
+            else showWhenAccessRootFail()
         }
     }
 
